@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="EasterEgg">Greg is a bunneh!!!</string>
+    <string name="app_name">1337Tipper</string>
+    <string name="col_percent">%</string>
+    <string name="col_tip">Tip</string>
+    <string name="col_total">Total</string>
+    <string name="col_left">Cash</string>
+    
+    <string name="mintip">min</string>
+    <string name="maxtip">Max</string>
+    <string name="idealtip">Ideal</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+   <color name="odd_row">#E9F7D7</color>
+   <color name="even_row">#DCEBC1</color>
+   <color name="palindrome">#BE0000</color>
+   <color name="background">#234120</color>
+   <color name="header">#44863E</color>
+   
+   <style name="GreenSummer" parent="@android:style/Theme.Black">        
+      <item name="android:textSize">20sp</item>
+      <item name="android:textColor">@color/odd_row</item>
+      <item name="android:background">@color/background</item>  
+   </style>    
+</resources>

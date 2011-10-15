@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/idealtip"
+          android:icon="@drawable/ic_percent_green"
+          android:title="@string/idealtip" />
+    <item android:id="@+id/mintip"
+          android:icon="@drawable/ic_percent_xxs"
+          android:title="@string/mintip" />
+    <item android:id="@+id/maxtip"
+          android:icon="@drawable/ic_percent_m"
+          android:title="@string/maxtip"/>
+</menu>

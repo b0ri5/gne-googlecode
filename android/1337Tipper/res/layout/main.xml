@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:layout_gravity="center"
+	android:stretchColumns="0"
+	style="@style/GreenSummer">
+		
+	<TableRow>
+		<TextView android:id="@+id/textview" 
+		android:layout_width="fill_parent"
+		android:layout_height="fill_parent"
+		android:text="@string/EasterEgg"
+		style="@style/GreenSummer" />
+	</TableRow>
+	
+	<!-- Input for bill amount -->
+	<TableRow>
+		<EditText android:id="@+id/edittext" 
+		android:lines="1"		
+		android:numeric="decimal"
+		android:text="0.00" 
+		android:layout_height="fill_parent"
+		android:textStyle="bold"
+		android:minWidth="200px"
+		android:textSize="40sp" android:layout_width="fill_parent" android:layout_gravity="center"/>
+	</TableRow>
+	
+	<!-- Separator line -->
+	<View
+        android:layout_height="2dip" 
+        android:background="#FF909090" />   
+             
+   <!-- Tipping suggestions -->
+	<TableRow>
+	  <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	  android:id="@+id/tipSuggestionsTable"
+	  android:orientation="vertical"
+	  android:layout_width="fill_parent"
+	  android:layout_height="fill_parent"
+	  android:layout_gravity="center"
+	  android:stretchColumns="0,1,2">
+	  <TableRow 
+	     android:background="@color/header">
+	     <TextView 
+			android:layout_column="0"
+			android:text="@string/col_percent" 
+			android:padding="3dip"
+			android:textStyle="bold"/>
+			<TextView 
+			android:layout_column="1"
+			android:text="@string/col_tip" 
+			android:padding="3dip"
+			android:textStyle="bold"/>
+			<TextView 
+			android:layout_column="2"
+			android:text="@string/col_total" 
+         android:padding="3dip"
+         android:textStyle="bold"/>
+         <TextView 
+         android:layout_column="3"
+         android:text="@string/col_left" 
+         android:padding="3dip"
+         android:textStyle="bold"/>
+		</TableRow>
+	</TableLayout>
+  </TableRow>
+</TableLayout>
