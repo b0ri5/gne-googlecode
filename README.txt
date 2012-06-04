@@ -15,6 +15,13 @@ Git:
 		And more generally, an arbitrary branch
 		$ git diff <branch_name>
 
+		To commit the changes to the branch
+		# -a means all and -m means message
+		$ git commit -a -m "<commit_message>"
+
+		To push a branch to the remote repository
+		$ git push origin <branch_name>
+
 	Tips:
 		To see the current branch in the bash prompt
 		# Place this in your ~/.bashrc
