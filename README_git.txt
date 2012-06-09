@@ -1,4 +1,7 @@
 Git:
+
+	Links:
+	  http://git-scm.com/book
 	
 	Using:
 		To start a new branch
@@ -22,7 +25,7 @@ Git:
 		To push a branch to the remote repository
 		$ git push origin <branch_name>
 
-	Tips:
+	Unix tips:
 		To see the current branch in the bash prompt
 		# Place this in your ~/.bashrc
 		export PS1='\u@\h:\w$(__git_ps1)\$ '
