@@ -1,7 +1,7 @@
 Git:
 
 	Links:
-	  http://git-scm.com/book
+		http://git-scm.com/book
 	
 	Using:
 		To start a new branch
