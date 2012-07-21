@@ -1,6 +1,6 @@
 """Simple implementation of problem 1"""
 
-__author__ == "Greg Tener"
+__author__ = "Greg Tener"
 
 def linear_sum(k):
 	return k * (k + 1) / 2
