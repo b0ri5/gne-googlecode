@@ -1,0 +1,222 @@
+import getpass
+import hashlib
+import logging
+import os
+import re
+import subprocess
+import SCons
+import time
+import urllib2
+from contextlib import closing
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('js-test-driver')
+
+
+def remote_file_action(target, source, env):
+  assert len(source) == 2
+  assert isinstance(source[0], SCons.Node.Python.Value)
+  assert isinstance(source[1], SCons.Node.Python.Value)
+  
+  assert len(target) == 1
+  assert isinstance(target[0], SCons.Node.FS.File)
+
+  url = source[0].get_contents()
+  sha1hex = source[1].get_contents()
+  filename = target[0].path
+
+  logger.info('Fetching %s', url)
+  with closing(urllib2.urlopen(url)) as f_url, open(filename, 'wb') as f_out:
+    remote = f_url.read()
+    logger.info('Fetched %d bytes', len(remote))
+    assert hashlib.sha1(remote).hexdigest() == sha1hex
+    logger.info('Digest test passed')
+    f_out.write(remote)
+
+
+def remote_file_method(env, url, filename, sha1hex):
+  return Builder(action=remote_file_action, source_factory=Value)(
+    env = env,
+    source = [url, sha1hex],
+    target = [filename],
+  )
+  
+  
+env = Environment()
+env.AddMethod(remote_file_method, 'RemoteFile')
+
+
+def create_js_test_driver_config_action(target, source, env):
+  assert len(target) == 1
+  assert isinstance(target[0], SCons.Node.FS.File)
+  for src in source[:-1]:
+    assert isinstance(src, SCons.Node.FS.File)
+    assert src.path.endswith('.js'), '%s must end with .js' % src
+  assert isinstance(source[-1], SCons.Node.Python.Value)
+
+  conf_filename = target[0].path
+  jsfiles = [src.path for src in source[:-1]]
+  port = source[-1]
+
+  with open(conf_filename, 'w') as f_conf:
+    f_conf.write('server: http://localhost:%s\n' % (port))
+    f_conf.write('load:\n')
+    for jsfile in jsfiles:
+      f_conf.write('  - %s\n' % jsfile)
+
+
+# The filename of the config should be dependent upon
+# the names of the source files to avoid any collision
+def create_js_test_driver_config_emitter(target, source, env):
+  assert len(target) == 0, 'Target %s unexpected' % (target) + \
+      ' : the target is computed here'
+  joined_filenames = '\n'.join(src.abspath for src in source[:-1])
+  hashhex = hashlib.sha1(joined_filenames).hexdigest()
+  target = ['jsTestDriver_%s.conf' % hashhex[:8]]
+  return target, source
+
+
+def maybe_start_js_test_driver(jarfile, port):
+  address = 'http://localhost:%d' % (port)
+  if js_test_driver_has_browser_captured(address):
+    logger.info('A captured browser has been detected')
+    return
+  
+  if not js_test_driver_is_running(address):
+    logger.info('JsTestDriver does not appear to be running')
+    cmd = ['java', '-jar', jarfile, '--port', str(port), '--browserTimeout', '2000']
+    logger.info('Executing %s' % (' '.join(cmd)))
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Wait a little bit to see if any browsers reconnect
+    for _ in range(3):
+      time.sleep(100. / 1000)
+      if js_test_driver_has_browser_captured(address):
+        logger.info('A captured browser has been detected')
+        return
+
+  logger.info('No captured browsers detected, capturing one')
+  chromepath = get_chrome_path()
+  cmd = [chromepath, '%s/capture' % (address)]
+  logger.info('Executing %s' % (' '.join(cmd)))
+  subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+  start = time.time()
+  # Wait up to 10 seconds for a browser to be captured
+  for i in range(100):
+    time.sleep(100. / 1000)
+    if js_test_driver_has_browser_captured(address):
+      logger.info('A browser should have started a page saying JsTestDriver page.')
+      logger.info('Took %.4lf seconds' % (time.time() - start))
+      break
+    
+
+def get_chrome_path():
+  return 'C:/Users/%s/AppData/Local/Google/Chrome/Application/chrome.exe' % (getpass.getuser())
+
+
+def js_test_driver_is_running(address):
+  try:
+    js_test_driver_output(address)
+    logger.info('JsTestDriver appears to be running')
+    return True
+  except urllib2.URLError as e:
+    logger.info('URLError with attempting to connect to %s' % (address))
+    return False
+
+
+def js_test_driver_output(address):
+    with closing(urllib2.urlopen(address)) as f:
+      return f.read()
+
+    
+def js_test_driver_has_browser_captured(address):
+  try:
+    contents = js_test_driver_output(address)
+  except urllib2.URLError as e:
+    logger.info('Unable to read from %s' % (address))
+    return False
+
+  pattern = 'Captured Browsers: \((\d+)\)'
+  match = re.search(pattern, contents, re.MULTILINE)
+  if match is None or len(match.groups()) != 1:
+    logger.info('No match for the pattern %s was found' % (pattern))
+    return False
+  if len(match.groups()) != 1:
+    logger.info('Expected there to be a single group, but found %s' % (match.groups()))
+    return False
+  count_as_string = match.groups()[0]
+  try:
+    count = int(count_as_string)
+  except ValueError as e:
+    logger.info('Expected %s to be an integer' % (count_as_string)) 
+    return False
+  logger.info('Found %d captured browsers' % (count))
+  return count > 0
+
+
+def run_js_test_driver_action(target, source, env):
+  assert len(source) == 5
+  for src in source[:-1]:
+    assert isinstance(src, SCons.Node.FS.File)
+
+  jarfile = source[0].path
+  config_file = source[1].path
+  port = int(source[-1].get_contents())
+  testout_file = target[0].path
+
+  # Start the server if it's necessary
+  maybe_start_js_test_driver(jarfile, port)
+
+  cmd = ['java', '-jar', jarfile, '--config', config_file, '--tests', 'all']
+  logger.info('Executing %s' % (' '.join(cmd)))
+  out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+  assert not err, 'The following error occurred: %s' % (err)
+  assert out, 'No output from attempting to run the test'
+  print out
+  with open(testout_file, 'w') as f:
+    f.write(out)
+  logger.info('Wrote test output to %s' % (testout_file))
+
+
+# The filename of the config should be dependent upon
+# the names of the source files to avoid any collision
+def run_js_test_driver_emitter(target, source, env):
+  assert len(target) == 0
+  assert len(target) == 0, 'Target %s unexpected' % (target) + \
+      ' : the target is computed here'
+  joined_filenames = '\n'.join(src.abspath for src in source[2:-1])
+  hashhex = hashlib.sha1(joined_filenames).hexdigest()
+  target = ['jsTestDriver_%s.log' % hashhex[:8]]
+  return target, source
+
+
+def run_js_test_driver_tests_method(env, tests):
+  port_string = '9876'
+  
+  js_test_driver_jar = env.RemoteFile(
+    url = 'http://js-test-driver.googlecode.com/files/JsTestDriver-1.3.5.jar',
+    sha1hex = '7a29ace71b9d5a82f5f0abe0ea22b73d7fd07826',
+    filename = 'JsTestDriver.jar',
+  )
+
+  js_test_driver_config = Builder(action = create_js_test_driver_config_action,
+      emitter = create_js_test_driver_config_emitter)(
+    source = tests + [Value(port_string)],
+    target = [], # Created by the emitter
+    env = env,
+  )
+  js_test_driver_output = Builder(action = run_js_test_driver_action,
+      emitter = run_js_test_driver_emitter)(
+    source = [js_test_driver_jar, js_test_driver_config] + tests + [Value(port_string)],
+    target = [], # Created by the emitter
+    env = env,
+  )
+  return js_test_driver_output
+
+
+env.AddMethod(run_js_test_driver_tests_method, 'RunJsTestDriverTests')
+
+test_results = env.RunJsTestDriverTests(
+  tests = ['prod.js', 'prod_test.js'],
+)
